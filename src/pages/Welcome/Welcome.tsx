@@ -9,6 +9,7 @@ const Welcome: FunctionComponent = () => {
       <Link to="/table">
         Ever wondered if you missed something from Star Wars? Take a look!
       </Link>
+      <p>сделал: Эрик Якубу</p>
     </main>
   );
 };
