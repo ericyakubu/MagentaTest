@@ -31,6 +31,7 @@ const App: FunctionComponent = () => {
       <Route path="/" element={<Navigate to="/welcome" />} />
       <Route path="/welcome" element={<Welcome />} />
       <Route path="/table" element={<TablePage />} />
+      <Route path="*" element={<Navigate to="/welcome" />} />
     </Routes>
   );
 };
