@@ -1,0 +1,25 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande",
+    "Lucida Sans", Arial, sans-serif;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+button {
+  border: none;
+  background: none;
+
+  &:hover {
+    cursor: pointer;
+  }
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
