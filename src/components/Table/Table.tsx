@@ -68,6 +68,8 @@ const Table: FunctionComponent = () => {
 
     const oldPeople = people;
 
+    console.log(filterBy);
+
     const filterPeople = (): PeopleType[] => {
       return oldPeople.filter((person) => {
         for (const key in filterBy) {
@@ -75,18 +77,19 @@ const Table: FunctionComponent = () => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const filterValue = (filterBy as any)[key];
             const personValue = person[key];
-            if (!filterValue) return true;
 
             if (typeof filterValue === "object") {
               if (
-                personValue < filterValue.min ||
-                personValue > filterValue.max
+                (filterValue.min !== undefined &&
+                  personValue < filterValue.min) ||
+                (filterValue.max !== undefined && personValue > filterValue.max)
               ) {
                 return false;
               }
             } else {
-              if (!filterValue) return true;
-              if (personValue !== filterValue) return false;
+              if (filterValue !== "" && personValue !== filterValue) {
+                return false;
+              }
             }
           }
         }

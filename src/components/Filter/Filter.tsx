@@ -1,72 +1,75 @@
-import { FunctionComponent, useEffect, useState } from "react";
+import { FormEvent, FunctionComponent, useEffect, useState } from "react";
 import { IoOptions, IoSearch } from "react-icons/io5";
 import classes from "./Filter.module.scss";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "../../redux";
-import { SubmitHandler, useForm } from "react-hook-form";
-import * as yup from "yup";
-import { yupResolver } from "@hookform/resolvers/yup";
 import { removeFilters, setFilterBy } from "../../redux/filterSlice";
 import { MdOutlineClear } from "react-icons/md";
-
-type Inputs = {
-  mass?: { min?: number; max?: number };
-  height?: { min?: number; max?: number };
-  eye_color?: string | undefined;
-  gender?: string | undefined;
-  birth_year?: { min?: number; max?: number };
-};
+import { InputRange } from "..";
 
 const Filter: FunctionComponent = () => {
   const { filters } = useSelector((state: RootState) => state.filters);
   const dispatch = useDispatch<AppDispatch>();
   const [open, setOpen] = useState<boolean>(false);
+  const [eyes, setEyes] = useState<string>("");
+  const [gender, setGender] = useState<string>("");
+  const [birthYear, setBirthYear] = useState<{ min: number; max: number }>({
+    min: filters.birth_year.min,
+    max: filters.birth_year.max,
+  });
+  const [mass, setMass] = useState<{ min: number; max: number }>({
+    min: filters.mass.min,
+    max: filters.mass.max,
+  });
+  const [height, setHeight] = useState<{ min: number; max: number }>({
+    min: filters.height.min,
+    max: filters.height.max,
+  });
 
-  const returnSchema = () => {
-    return yup.object().shape({
-      mass: yup.object().shape(createMinMaxTest("mass")),
-      height: yup.object().shape(createMinMaxTest("height")),
-      birth_year: yup.object().shape(createMinMaxTest("birth_year")),
-      eye_color: yup.string().default(filters.eye_color[0]),
-      gender: yup.string().default(filters.gender[0]),
-    });
+  const [errors, setErrors] = useState({
+    massErr: { min: false, max: false },
+    heightErr: { min: false, max: false },
+    birth_yearErr: { min: false, max: false },
+  });
+
+  const validateMinMax = (key: string, min: number, max: number) => {
+    const filterObj = filters[key] as { min: number; max: number };
+
+    return {
+      min: min >= max || min < 0,
+      max: max > filterObj.max || max <= min,
+    };
   };
 
-  const createMinMaxTest = (fieldName: string) => ({
-    min: yup
-      .number()
-      .min((filters[fieldName] as { min: number; max: number }).min)
-      .default((filters[fieldName] as { min: number; max: number }).min)
-      .test("min-max", function (value) {
-        const { max } = this.parent;
-        return value === undefined || max === undefined || value < max;
-      }),
-    max: yup
-      .number()
-      .max((filters[fieldName] as { min: number; max: number }).max)
-      .default((filters[fieldName] as { min: number; max: number }).max)
-      .test("min-max", function (value) {
-        const { min } = this.parent;
-        return value === undefined || min === undefined || value > min;
-      }),
-  });
+  const handleErrorCheck = () => {
+    setErrors((prevErrors) => ({
+      ...prevErrors,
+      massErr: validateMinMax("mass", mass.min, mass.max),
+      heightErr: validateMinMax("height", height.min, height.max),
+      birth_yearErr: validateMinMax("birth_year", birthYear.min, birthYear.max),
+    }));
+  };
 
-  let validationSchema = returnSchema();
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (
+      errors.massErr.min ||
+      errors.massErr.max ||
+      errors.heightErr.min ||
+      errors.heightErr.max ||
+      errors.birth_yearErr.min ||
+      errors.birth_yearErr.max
+    )
+      return;
 
-  useEffect(() => {
-    if (filters.mass.min === 0 || isNaN(filters.mass.min)) return;
-    validationSchema = returnSchema();
-  }, [filters]);
-
-  const {
-    register,
-    formState: { errors },
-    handleSubmit,
-  } = useForm({
-    resolver: yupResolver(validationSchema),
-  });
-  const onSubmit: SubmitHandler<Inputs> = (data) => {
-    dispatch(setFilterBy(data));
+    const filt = {
+      mass,
+      height,
+      eye_color: eyes,
+      gender: gender,
+      birth_year: birthYear,
+    };
+    dispatch(setFilterBy(filt));
     toggleOpen();
   };
 
@@ -78,6 +81,25 @@ const Filter: FunctionComponent = () => {
     dispatch(removeFilters());
     toggleOpen();
   };
+
+  useEffect(() => {
+    handleErrorCheck();
+  }, [birthYear, mass, height]);
+
+  useEffect(() => {
+    setBirthYear({
+      min: filters.birth_year.min,
+      max: filters.birth_year.max,
+    });
+    setMass({
+      min: filters.mass.min,
+      max: filters.mass.max,
+    });
+    setHeight({
+      min: filters.height.min,
+      max: filters.height.max,
+    });
+  }, [filters]);
 
   return (
     <section
@@ -101,7 +123,7 @@ const Filter: FunctionComponent = () => {
         {open && filters && (
           <form
             className={classes.Filter__filters}
-            onSubmit={handleSubmit(onSubmit)}
+            onSubmit={onSubmit}
             style={
               open && filters
                 ? { width: "100%", opacity: 1 }
@@ -110,10 +132,7 @@ const Filter: FunctionComponent = () => {
           >
             <label className={classes.Filter__opt_select}>
               <p>Eye color</p>
-              <select
-                {...register("eye_color")}
-                className={errors.eye_color ? classes.Error : ""}
-              >
+              <select onChange={(e) => setEyes(e.target.value)}>
                 <option value={""}>Select</option>
                 {filters.eye_color.map((color) => (
                   <option value={color} key={color}>
@@ -124,10 +143,7 @@ const Filter: FunctionComponent = () => {
             </label>
             <label className={classes.Filter__opt_select}>
               <p>Gender</p>
-              <select
-                {...register("gender")}
-                className={errors.gender ? classes.Error : ""}
-              >
+              <select onChange={(e) => setGender(e.target.value)}>
                 <option value={""}>Select</option>
                 {filters.gender.map((gen) => (
                   <option value={gen} key={gen}>
@@ -136,74 +152,46 @@ const Filter: FunctionComponent = () => {
                 ))}
               </select>
             </label>
+            <InputRange
+              label="Birth Year"
+              valueMin={birthYear.min}
+              valueMax={birthYear.max}
+              min={filters.birth_year.min}
+              max={filters.birth_year.max}
+              onChangeMin={(value) =>
+                setBirthYear({ ...birthYear, min: value })
+              }
+              onChangeMax={(value) =>
+                setBirthYear({ ...birthYear, max: value })
+              }
+              errorMin={errors.birth_yearErr.min}
+              errorMax={errors.birth_yearErr.max}
+            />
 
-            <div className={classes.Filter__opt}>
-              <p>Birth year</p>
-              <div className={classes.Filter__opt_inputs}>
-                <label>
-                  <span>Min: </span>
-                  <input
-                    {...(register("birth_year.min"),
-                    { defaultValue: filters.birth_year.min })}
-                    className={errors.birth_year?.max ? classes.Error : ""}
-                  />
-                </label>
-                <label>
-                  <span>Max: </span>
-                  <input
-                    {...(register("birth_year.max"),
-                    { defaultValue: filters.birth_year.max })}
-                    className={errors.birth_year?.max ? classes.Error : ""}
-                  />
-                </label>
-              </div>
-            </div>
-            <div className={classes.Filter__opt}>
-              <p>Mass</p>
-              <div className={classes.Filter__opt_inputs}>
-                <label>
-                  <span>Min: </span>
-                  <input
-                    {...(register("mass.min"),
-                    { defaultValue: filters.mass.min })}
-                    className={errors.mass?.min ? classes.Error : ""}
-                  />
-                </label>
-                <label>
-                  <span>Max: </span>
-                  <input
-                    {...(register("mass.max"),
-                    { defaultValue: filters.mass.max })}
-                    className={errors.mass?.max ? classes.Error : ""}
-                  />
-                </label>
-              </div>
-            </div>
-            <div className={classes.Filter__opt}>
-              <p>Height</p>
-              <div className={classes.Filter__opt_inputs}>
-                <label>
-                  <span>Min: </span>
-                  <input
-                    {...(register("height.min"),
-                    { defaultValue: filters.height.min })}
-                    className={errors.height?.max ? classes.Error : ""}
-                  />
-                </label>
-                <label>
-                  <span>Max: </span>
-                  <input
-                    {...(register("height.max"),
-                    { defaultValue: filters.height.max })}
-                    className={errors.height?.max ? classes.Error : ""}
-                  />
-                </label>
-              </div>
-            </div>
-            <button
-              onClick={handleSubmit(onSubmit)}
-              className={`${classes.Filter__submit}`}
-            >
+            <InputRange
+              label="Mass"
+              valueMin={mass.min}
+              valueMax={mass.max}
+              min={filters.mass.min}
+              max={filters.mass.max}
+              onChangeMin={(value) => setMass({ ...mass, min: value })}
+              onChangeMax={(value) => setMass({ ...mass, max: value })}
+              errorMin={errors.massErr.min}
+              errorMax={errors.massErr.max}
+            />
+
+            <InputRange
+              label="Height"
+              valueMin={height.min}
+              valueMax={height.max}
+              min={filters.height.min}
+              max={filters.height.max}
+              onChangeMin={(value) => setHeight({ ...height, min: value })}
+              onChangeMax={(value) => setHeight({ ...height, max: value })}
+              errorMin={errors.heightErr.min}
+              errorMax={errors.heightErr.max}
+            />
+            <button type="submit" className={`${classes.Filter__submit}`}>
               <IoSearch />
             </button>
             <button

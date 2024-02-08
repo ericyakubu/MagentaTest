@@ -84,6 +84,7 @@ export const filter = createSlice({
       state.filters = newFilters;
     },
     setFilterBy: (state, action: PayloadAction<FilterByType>) => {
+      // console.log(action.payload);
       state.filterBy = action.payload;
     },
     removeFilters: (state) => {
